@@ -144,6 +144,7 @@ typedef struct {
 	size_t collen;
 	Font font, bfont, ifont, ibfont;
 	GC gc;
+	unsigned short bg_alpha;
 } DC;
 
 static inline ushort sixd_to_16bit(int);
@@ -824,7 +825,7 @@ xloadcols(void)
 	/* set alpha value of bg color */
 	if (opt_alpha)
 		alpha = strtof(opt_alpha, NULL);
-	dc.col[defaultbg].color.alpha = (unsigned short)(0xffff * alpha);
+   	dc.bg_alpha = (unsigned short)(0xFFFF * alpha);
 	dc.col[defaultbg].pixel &= 0x00FFFFFF;
 	dc.col[defaultbg].pixel |= (unsigned char)(0xff * alpha) << 24;
 	loaded = 1;
@@ -1460,7 +1461,7 @@ chgalpha(const Arg *arg)
    else
       return;
 
-   dc.col[defaultbg].color.alpha = (unsigned short)(0xFFFF * alpha);
+   dc.bg_alpha = (unsigned short)(0xFFFF * alpha);
    /* Required to remove artifacting from borderpx */
    cresize(0, 0);
    redraw();
@@ -1496,15 +1497,16 @@ xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len, int x, i
 	}
 
 	if (IS_TRUECOL(base.bg)) {
-		colbg.alpha = 0xffff;
+		colbg.alpha = dc.bg_alpha;
 		colbg.green = TRUEGREEN(base.bg);
 		colbg.red = TRUERED(base.bg);
 		colbg.blue = TRUEBLUE(base.bg);
 		XftColorAllocValue(xw.dpy, xw.vis, xw.cmap, &colbg, &truebg);
-		bg = &truebg;
 	} else {
-		bg = &dc.col[base.bg];
+		truebg = dc.col[base.bg];
+		truebg.color.alpha = dc.bg_alpha;
 	}
+	bg = &truebg;
 
 	/* Change basic system colors [0-7] to bright system colors [8-15] */
 	if ((base.mode & ATTR_BOLD_FAINT) == ATTR_BOLD && BETWEEN(base.fg, 0, 7))
